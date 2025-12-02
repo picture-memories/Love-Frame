@@ -30,8 +30,6 @@
                 return;
             }
 
-            const reg = await navigator.serviceWorker.register("/static/sw.js");
-
             const permission = await Notification.requestPermission();
             if (permission !== "granted") {
                 alert("Please allow notifications otherwise some stuff might not work :(");
