@@ -1,12 +1,32 @@
 <!DOCTYPE html>
 <html>
 <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Your Love Media</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
 </head>
 <body>
     <p><a href="/">Back to home</a></p>
     <h1>Someone sent you love!</h1>
-    
+
+    {% if media_url %}
+        {% set lower = media_url.lower() %}
+
+        {% if lower.endswith('.mp4') or lower.endswith('.webm') %}
+            <video controls autoplay playsinline src="{{ media_url }}"></video>
+
+        {% elif lower.endswith('.png') or lower.endswith('.jpg') or lower.endswith('.jpeg') or lower.endswith('.gif') %}
+            <img src="{{ media_url }}" alt="Love Media">
+
+        {% else %}
+            <p>Unknown media type. Open directly:</p>
+            <a href="{{ media_url }}">{{ media_url }}</a>
+        {% endif %}
+
+    {% else %}
+        <p>No media URL provided.</p>
+    {% endif %}
+
     <p><a href="/">Back to home</a></p>
 </body>
 </html>
