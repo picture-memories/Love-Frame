@@ -1,8 +1,6 @@
 from flask import Flask, request, send_from_directory, render_template
 from pywebpush import webpush, WebPushException
-import random
-import os
-import json
+import random, os, json
 
 app = Flask(__name__)
 
@@ -63,8 +61,7 @@ def upload_media():
     path = os.path.join(UPLOAD_FOLDER, filename)
     file.save(path)
 
-    # Use /view/<filename> instead of raw file to avoid blank page on iOS
-    media_url = f"/view/{filename}"
+    media_url = f"/view/{filename}"  # Always use /view/ route
 
     rnd_file = random.choice(LOVE_FILE)
     data = {
