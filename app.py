@@ -61,7 +61,7 @@ def upload_media():
     path = os.path.join(UPLOAD_FOLDER, filename)
     file.save(path)
 
-    # IMPORTANT: Always send /uploads path to the website
+    # Absolute path sent to the Service Worker
     media_url = f"/uploads/{filename}"
 
     rnd_file = random.choice(LOVE_FILE)
@@ -77,12 +77,12 @@ def upload_media():
         try:
             webpush(
                 subscription_info=sub,
-                data=json.dumps(payload),  # JSON FIXED
+                data=json.dumps(payload),
                 vapid_private_key=VAPID_PRIVATE_KEY,
                 vapid_claims=VAPID_CLAIMS
             )
         except WebPushException as e:
-            print("Push error:", e)
+            print("Push error (removing sub):", e)
             remove_subs.append(sub)
 
     # Clean invalid subscriptions
@@ -98,11 +98,6 @@ def upload_media():
 def serve_media(filename):
     return send_from_directory(UPLOAD_FOLDER, filename)
 
-# OPTIONAL: still allow manual viewing
-@app.get("/view/<path:filename>")
-def view_media(filename):
-    return render_template("view_media.html", media_url=f"/uploads/{filename}")
-
 # -------------------- SUBSCRIPTION ROUTES --------------------
 @app.post("/save-subscription")
 def save_subscription():
@@ -116,18 +111,19 @@ def save_subscription():
 # -------------------- SEND LOVE MESSAGE --------------------
 @app.get("/sendlove")
 def send_love():
+    # ... (Sending logic is correct here) ...
     remove_subs = []
     for sub in subscriptions:
         try:
             payload = {
                 "title": "Love Alert <3",
                 "body": random.choice(LOVE_MESSAGES),
-                "mediaUrl": None
+                "mediaUrl": None # No media URL for a simple love message
             }
 
             webpush(
                 subscription_info=sub,
-                data=json.dumps(payload),  # JSON FIXED
+                data=json.dumps(payload),
                 vapid_private_key=VAPID_PRIVATE_KEY,
                 vapid_claims=VAPID_CLAIMS
             )
