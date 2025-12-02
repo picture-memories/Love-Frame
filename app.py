@@ -67,4 +67,82 @@ def upload_media():
     payload = {
         "title": "New Media <3",
         "body": rnd_file,
-        "mediaUrl": media
+        "mediaUrl": media_url
+    }
+
+    # Send notifications (unchanged)
+    remove_subs = []
+    for sub in subscriptions:
+        try:
+            webpush(
+                subscription_info=sub,
+                data=json.dumps(payload),
+                vapid_private_key=VAPID_PRIVATE_KEY,
+                vapid_claims=VAPID_CLAIMS
+            )
+        except WebPushException as e:
+            print("Push error (removing sub):", e)
+            remove_subs.append(sub)
+
+    if remove_subs:
+        for sub in remove_subs:
+            subscriptions.remove(sub)
+        with open(SUB_FILE, "w") as f:
+            json.dump(subscriptions, f)
+
+    return "OK"
+
+@app.get("/uploads/<path:filename>")
+def serve_media(filename):
+    return send_from_directory(UPLOAD_FOLDER, filename)
+
+# 🔥 FIX HERE: Construct the absolute URL before passing to the template
+@app.get("/view/<path:filename>")
+def view_media(filename):
+    # CRITICAL FIX for iOS PWA: Use request.url_root (e.g., https://love-frame.onrender.com/)
+    # to construct the FULL absolute URL for the media file.
+    full_media_url = f"{request.url_root}uploads/{filename}"
+    
+    # Pass the full URL to the template
+    return render_template("view_media.html", media_url=full_media_url)
+
+# -------------------- SUBSCRIPTION ROUTES --------------------
+@app.post("/save-subscription")
+def save_subscription():
+    sub = request.get_json()
+    if sub not in subscriptions:
+        subscriptions.append(sub)
+        with open(SUB_FILE, "w") as f:
+            json.dump(subscriptions, f)
+    return "OK"
+
+# -------------------- SEND LOVE MESSAGE --------------------
+@app.get("/sendlove")
+def send_love():
+    # ... (Sending logic is unchanged) ...
+    remove_subs = []
+    for sub in subscriptions:
+        try:
+            payload = {
+                "title": "Love Alert <3",
+                "body": random.choice(LOVE_MESSAGES),
+                "mediaUrl": None
+            }
+
+            webpush(
+                subscription_info=sub,
+                data=json.dumps(payload),
+                vapid_private_key=VAPID_PRIVATE_KEY,
+                vapid_claims=VAPID_CLAIMS
+            )
+        except WebPushException as e:
+            print("Push Failed:", e)
+            remove_subs.append(sub)
+
+    if remove_subs:
+        for sub in remove_subs:
+            subscriptions.remove(sub)
+        with open(SUB_FILE, "w") as f:
+            json.dump(subscriptions, f)
+
+    return "Your love has been sent!"
