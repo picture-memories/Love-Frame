@@ -4,7 +4,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <link rel="manifest" href="manifest.json">
-    <title>Love Frame 3</title>
+    <title>Love Frame</title>
 </head>
 <body>
     <h1>Love Frame</h1>
@@ -17,7 +17,6 @@
     <div id="mediaContainer"></div>
 
     <script>
-        // ---------------- Helper to convert VAPID key ----------------
         function urlBase64ToUint8Array(base64String) {
             const padding = '='.repeat((4 - base64String.length % 4) % 4);
             const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
@@ -25,22 +24,13 @@
             return Uint8Array.from([...rawData].map(c => c.charCodeAt(0)));
         }
 
-        // ---------------- Setup Push Notifications ----------------
         async function setupNotifications() {
-            if (!('serviceWorker' in navigator)) {
-                alert("Service workers not supported");
-                return;
-            }
+            if (!('serviceWorker' in navigator)) { alert("Service workers not supported"); return; }
 
             try {
                 const reg = await navigator.serviceWorker.register('/service-worker.js');
-                console.log('Service Worker registered!');
-
                 const permission = await Notification.requestPermission();
-                if (permission !== "granted") {
-                    alert("Please allow notifications!");
-                    return;
-                }
+                if (permission !== "granted") { alert("Please allow notifications!"); return; }
 
                 const sub = await reg.pushManager.subscribe({
                     userVisibleOnly: true,
@@ -56,81 +46,51 @@
                 });
 
                 alert("Notifications enabled! <3");
-
-            } catch (err) {
-                console.error("Failed to setup notifications:", err);
-                alert("Notifications setup failed");
-            }
+            } catch (err) { console.error(err); alert("Notifications setup failed"); }
         }
 
-        document.getElementById("enableNotifs").onclick = () => setupNotifications();
+        document.getElementById("enableNotifs").onclick = setupNotifications;
 
-        // ---------------- Send Love Button ----------------
         document.getElementById("loveBtn").onclick = async () => {
-            try {
-                const res = await fetch("/sendlove");
-                const msg = await res.text();
-                alert(msg);
-            } catch (err) {
-                alert("Failed to send love");
-            }
+            try { const res = await fetch("/sendlove"); alert(await res.text()); }
+            catch { alert("Failed to send love"); }
         };
 
-        // ---------------- Upload Media ----------------
         async function uploadMedia() {
             const fileInput = document.getElementById("mediaInput");
-            if (!fileInput.files.length) {
-                alert("Select a photo or video!");
-                return;
-            }
+            if (!fileInput.files.length) { alert("Select a photo or video!"); return; }
 
             const formData = new FormData();
             formData.append("media", fileInput.files[0]);
 
             try {
                 const response = await fetch("/uploads", { method: "POST", body: formData });
-                if (response.ok) {
-                    alert("Sent with love <3");
-                } else {
-                    alert("Upload failed.");
-                }
-            } catch (err) {
-                alert("Upload failed.");
-            }
+                alert(response.ok ? "Sent with love <3" : "Upload failed.");
+            } catch { alert("Upload failed."); }
         }
 
-        // ---------------- Display Media ----------------
         function showMedia(mediaUrl) {
             const container = document.getElementById("mediaContainer");
             container.innerHTML = "";
             if (mediaUrl.endsWith(".mp4") || mediaUrl.endsWith(".webm")) {
                 const video = document.createElement("video");
-                video.src = mediaUrl;
-                video.controls = true;
-                video.autoplay = true;
+                video.src = mediaUrl; video.controls = true; video.autoplay = true;
                 container.appendChild(video);
             } else if (/\.(png|jpg|jpeg|gif)$/i.test(mediaUrl)) {
                 const img = document.createElement("img");
-                img.src = mediaUrl;
-                container.appendChild(img);
+                img.src = mediaUrl; container.appendChild(img);
             }
             const back = document.createElement("p");
             back.innerHTML = `<a href="/">Back to home</a>`;
             container.appendChild(back);
         }
 
-        // ---------------- Check URL param ----------------
         const params = new URLSearchParams(window.location.search);
-        if (params.has("media")) {
-            showMedia(params.get("media"));
-        }
+        if (params.has("media")) { showMedia(params.get("media")); }
 
-        // ---------------- Listen for messages from SW ----------------
         if (navigator.serviceWorker) {
             navigator.serviceWorker.addEventListener('message', event => {
-                if (event.data?.mediaUrl) {
-                    showMedia(event.data.mediaUrl);
-                }
+                if (event.data?.mediaUrl) { showMedia(event.data.mediaUrl); }
             });
         }
     </script>
