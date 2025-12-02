@@ -12,7 +12,7 @@ if os.path.exists(SUB_FILE):
 else:
     subscriptions = []
 
-VAPID_PRIVATE_KEY = "ifdb_gOVdDOJQEroNgSqDenNI64-uIPHMRI4JWiKwek"
+VAPID_PRIVATE_KEY = "xP-gLA6tBjUjHFQesQIlbdAd6I1nVj9R3sI8D2JyMek"
 VAPID_CLAIMS = {"sub": "mailto:zenovix05@gmail.com"}
 
 # -------------------- Service Worker --------------------
