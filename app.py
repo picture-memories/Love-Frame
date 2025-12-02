@@ -99,9 +99,8 @@ def serve_media(filename):
 # 🔥 FIX HERE: Construct the absolute URL before passing to the template
 @app.get("/view/<path:filename>")
 def view_media(filename):
-    # CRITICAL FIX for iOS PWA: Use request.url_root (e.g., https://love-frame.onrender.com/)
-    # to construct the FULL absolute URL for the media file.
-    full_media_url = f"{request.url_root}uploads/{filename}"
+    # This is the path segment for your static file folder
+    media_path_segment = f"uploads/{filename}"
     
     # Pass the full URL to the template
     return render_template("view_media.html", media_url=full_media_url)
