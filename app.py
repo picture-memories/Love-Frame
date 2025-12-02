@@ -1,5 +1,4 @@
-from urllib.parse import urljoin
-from flask import Flask, request, send_from_directory, render_template
+from flask import Flask, request, send_from_directory, render_template, url_for
 from pywebpush import webpush, WebPushException
 import random, os, json
 
@@ -62,7 +61,8 @@ def upload_media():
     path = os.path.join(UPLOAD_FOLDER, filename)
     file.save(path)
 
-    media_url = f"/uploads/{filename}"
+    # MAIN FIX: send the /view URL, not /uploads
+    media_url = f"/view/{filename}"
 
     rnd_file = random.choice(LOVE_FILE)
     payload = {
@@ -71,7 +71,6 @@ def upload_media():
         "mediaUrl": media_url
     }
 
-    # Send notifications (unchanged)
     remove_subs = []
     for sub in subscriptions:
         try:
@@ -97,24 +96,14 @@ def upload_media():
 def serve_media(filename):
     return send_from_directory(UPLOAD_FOLDER, filename)
 
-# @app.get("/view/<path:filename>") route
+# -------------------- VIEW ROUTE (Shows media nicely) --------------------
 @app.get("/view/<path:filename>")
 def view_media(filename):
-    # This is the path segment for your static file folder
-    media_path_segment = f"uploads/{filename}"
-    
-    # 🎯 FINAL FIX: Use the full request.url_root and manually join the path.
-    # We must ensure the path is treated as absolute relative to the root.
-    
-    # Example: urljoin('https://love-frame.onrender.com/', 'uploads/image.jpg')
-    # This correctly handles the trailing slash on the root URL.
-    full_media_url = urljoin(request.url_root, media_path_segment)
-    
-    # Pass the full, guaranteed-correct URL to the template
-    return render_template("view_media.html", media_url=full_media_url)
-    
-    # Pass the full URL to the template
-    return render_template("view_media.html", media_url=full_media_url)
+
+    # Create absolute URL to actual uploaded file
+    uploaded_url = url_for('serve_media', filename=filename, _external=True)
+
+    return render_template("view_media.html", media_url=uploaded_url)
 
 # -------------------- SUBSCRIPTION ROUTES --------------------
 @app.post("/save-subscription")
@@ -129,7 +118,6 @@ def save_subscription():
 # -------------------- SEND LOVE MESSAGE --------------------
 @app.get("/sendlove")
 def send_love():
-    # ... (Sending logic is unchanged) ...
     remove_subs = []
     for sub in subscriptions:
         try:
