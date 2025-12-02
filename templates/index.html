@@ -5,30 +5,31 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <link rel="manifest" href="manifest.json">
     <title>Love Frame</title>
-    <style>
-        /* Simple styling for media display */
-        #mediaContainer img, #mediaContainer video {
-            max-width: 100%;
-            height: auto;
-            border-radius: 8px;
-            display: block;
-            margin: 10px auto;
-        }
-    </style>
+
+    <link rel="stylesheet" href="styles.css">
+    
 </head>
 <body>
+
     <h1>Love Frame</h1>
 
-    <input id="mediaInput" type="file" accept="image/*,video/*" />
-    <button onclick="uploadMedia()">Send Photo/Video</button>
-    <button id="loveBtn">Send love</button>
-    <button id="enableNotifs">Enable Notifications</button>
+    <div class="controls-container">
+        <div class="upload-section">
+            <input id="mediaInput" type="file" accept="image/*,video/*" />
+            <button onclick="uploadMedia()">Send Photo/Video</button>
+        </div>
+        
+        <div class="action-buttons">
+            <button id="loveBtn">Send love</button>
+            <button id="enableNotifs">Enable Notifications</button>
+        </div>
+    </div>
 
     <div id="mediaContainer"></div>
 
     <script>
         // Version Log
-        console.log("Love App Version: 4.0 (View Route Bypass)");
+        console.log("Love App Version: 4.0 (External CSS)");
 
         // 1. SETUP THE RADIO CHANNEL (Listens for in-app updates from Service Worker)
         const channel = new BroadcastChannel('love-channel');
@@ -87,6 +88,7 @@
         // 3. SETUP NOTIFICATIONS
         async function setupNotifications() {
             const reg = await navigator.serviceWorker.register("/service-worker.js");
+
             const permission = await Notification.requestPermission();
             if (permission !== "granted") return alert("Please allow notifications!");
 
@@ -109,8 +111,6 @@
             const res = await fetch("/sendlove");
             alert(await res.text());
         };
-        
-        // REMOVED: URL parameter check as the notification click now goes to /view/filename
     </script>
 </body>
 </html>
