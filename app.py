@@ -4,24 +4,31 @@ import random
 import os
 import json
 
-app = Flask(__name__)
-subscriptions = []
+app = Flask(__name__)  # MUST come first
 
-# VAPID keys
+# -------------------- Persistent Subscriptions --------------------
+SUB_FILE = "subscriptions.json"
+
+if os.path.exists(SUB_FILE):
+    with open(SUB_FILE, "r") as f:
+        subscriptions = json.load(f)
+else:
+    subscriptions = []
+
 VAPID_PRIVATE_KEY = "ifdb_gOVdDOJQEroNgSqDenNI64-uIPHMRI4JWiKwek"
 VAPID_CLAIMS = {"sub": "mailto:zenovix05@gmail.com"}
 
-# ---------------- Serve Service Worker ----------------
+# -------------------- Service Worker --------------------
 @app.route('/service-worker.js')
 def service_worker():
     return send_from_directory('.', 'service-worker.js')
 
-# ---------------- HOME ROUTE ----------------
+# -------------------- HOME ROUTE --------------------
 @app.get("/")
 def home():
     return render_template("index.html")
 
-# ---------------- LOVE MESSAGES ----------------
+# -------------------- LOVE MESSAGES --------------------
 LOVE_FILE = [
     "Your love has sent you a photo/video <3",
     "Your sweetheart has sent you a photo/video <3",
@@ -43,7 +50,7 @@ LOVE_MESSAGES = [
     "You are their sweetheart!! And they love you so much <3"
 ]
 
-# ---------------- UPLOAD HANDLING ----------------
+# -------------------- UPLOAD HANDLING --------------------
 UPLOAD_FOLDER = "uploads"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
@@ -66,16 +73,26 @@ def upload_media():
         "mediaUrl": media_url
     }
 
+    # Send push notifications to all saved subscriptions
+    remove_subs = []
     for sub in subscriptions:
         try:
             webpush(
                 subscription_info=sub,
-                data=json.dumps(data),
+                data=str(data),
                 vapid_private_key=VAPID_PRIVATE_KEY,
                 vapid_claims=VAPID_CLAIMS
             )
         except WebPushException as e:
             print("Push error:", e)
+            remove_subs.append(sub)  # remove invalid subscriptions
+
+    # Update the JSON file if any subscriptions were removed
+    if remove_subs:
+        for sub in remove_subs:
+            subscriptions.remove(sub)
+        with open(SUB_FILE, "w") as f:
+            json.dump(subscriptions, f)
 
     return "OK"
 
@@ -83,21 +100,28 @@ def upload_media():
 def serve_media(filename):
     return send_from_directory(UPLOAD_FOLDER, filename)
 
-# ---------------- SUBSCRIPTION ROUTES ----------------
+# -------------------- SUBSCRIPTION ROUTES --------------------
 @app.post("/save-subscription")
 def save_subscription():
-    subscription = request.get_json()
-    subscriptions.append(subscription)
+    sub = request.get_json()
+
+    if sub not in subscriptions:
+        subscriptions.append(sub)
+        with open(SUB_FILE, "w") as f:
+            json.dump(subscriptions, f)
+
     return "OK"
 
+# -------------------- SEND LOVE --------------------
 @app.get("/sendlove")
 def send_love():
+    remove_subs = []
     for sub in subscriptions:
         try:
             rnd_msg = random.choice(LOVE_MESSAGES)
             webpush(
                 subscription_info=sub,
-                data=json.dumps({
+                data=str({
                     "title": "Love Alert <3",
                     "body": rnd_msg
                 }),
@@ -106,4 +130,13 @@ def send_love():
             )
         except WebPushException as e:
             print("Push Failed:", e)
+            remove_subs.append(sub)
+
+    # Remove invalid subscriptions
+    if remove_subs:
+        for sub in remove_subs:
+            subscriptions.remove(sub)
+        with open(SUB_FILE, "w") as f:
+            json.dump(subscriptions, f)
+
     return "Your love has been sent!"
