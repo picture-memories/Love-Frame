@@ -2,27 +2,35 @@
 self.addEventListener("push", (event) => {
     let data = {};
     try {
-        // Safely parse JSON data from the push event
+        // Safely parse the incoming JSON payload
         data = event.data.json();
     } catch (e) {
-        console.warn("Push event has no data or invalid JSON", e);
+        console.warn("Push event data could not be parsed:", e);
     }
 
+    // Show a notification
     event.waitUntil(
         self.registration.showNotification(data.title || "Love Frame <3", {
             body: data.body || "Someone sent you love!",
-            icon: "/icon.png",
+            icon: "/icon.png",           // Make sure this icon exists in /static
             data: { mediaUrl: data.mediaUrl || null }
         })
     );
 });
 
-// Handle clicks on notifications
+// Handle notification clicks
 self.addEventListener("notificationclick", (event) => {
     event.notification.close();
 
     const mediaUrl = event.notification.data?.mediaUrl;
 
-    // Open the media URL if it exists, otherwise open home page
-    event.waitUntil(clients.openWindow(mediaUrl || "/"));
+    // Open the media if it exists, else open home page
+    event.waitUntil(
+        clients.openWindow(mediaUrl || "/")
+    );
+});
+
+// Optional: activate and claim clients immediately
+self.addEventListener("activate", (event) => {
+    event.waitUntil(self.clients.claim());
 });
