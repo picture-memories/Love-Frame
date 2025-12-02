@@ -2,16 +2,16 @@ from flask import Flask, request, send_from_directory, render_template
 from pywebpush import webpush, WebPushException
 import random
 import os
-import json  # <-- needed for proper JSON payload
+import json
 
-app = Flask(__name__)  # MUST come first
+app = Flask(__name__)
 subscriptions = []
 
 # VAPID keys
 VAPID_PRIVATE_KEY = "ifdb_gOVdDOJQEroNgSqDenNI64-uIPHMRI4JWiKwek"
 VAPID_CLAIMS = {"sub": "mailto:zenovix05@gmail.com"}
 
-# ---------------- SERVICE WORKER ----------------
+# ---------------- Serve Service Worker ----------------
 @app.route('/service-worker.js')
 def service_worker():
     return send_from_directory('.', 'service-worker.js')
@@ -66,12 +66,11 @@ def upload_media():
         "mediaUrl": media_url
     }
 
-    # Send push notifications
     for sub in subscriptions:
         try:
             webpush(
                 subscription_info=sub,
-                data=json.dumps(data),  # <-- proper JSON
+                data=json.dumps(data),
                 vapid_private_key=VAPID_PRIVATE_KEY,
                 vapid_claims=VAPID_CLAIMS
             )
@@ -87,10 +86,10 @@ def serve_media(filename):
 # ---------------- SUBSCRIPTION ROUTES ----------------
 @app.post("/save-subscription")
 def save_subscription():
-    subscriptions.append(request.get_json())
+    subscription = request.get_json()
+    subscriptions.append(subscription)
     return "OK"
 
-# ---------------- SEND LOVE ----------------
 @app.get("/sendlove")
 def send_love():
     for sub in subscriptions:
@@ -98,7 +97,7 @@ def send_love():
             rnd_msg = random.choice(LOVE_MESSAGES)
             webpush(
                 subscription_info=sub,
-                data=json.dumps({  # <-- proper JSON
+                data=json.dumps({
                     "title": "Love Alert <3",
                     "body": rnd_msg
                 }),
@@ -107,5 +106,4 @@ def send_love():
             )
         except WebPushException as e:
             print("Push Failed:", e)
-
     return "Your love has been sent!"
