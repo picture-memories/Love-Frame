@@ -1,29 +1,38 @@
 // service-worker.js
 
+const SW_VERSION = "3.0"; // Change this string whenever you update code to force a refresh!
+
+// 1. FORCE THE NEW VERSION TO TAKE OVER IMMEDIATELY
+self.addEventListener("install", (event) => {
+    // This tells the browser: "Don't wait! Activate this new version ASAP."
+    self.skipWaiting(); 
+});
+
+self.addEventListener("activate", (event) => {
+    // This tells the browser: "Take control of all open tabs right now."
+    event.waitUntil(self.clients.claim());
+});
+
+// 2. SETUP THE RADIO CHANNEL (For in-app updates)
+const channel = new BroadcastChannel('love-channel');
+
 self.addEventListener("push", (event) => {
     let data = {};
-    try {
-        data = event.data.json();
-    } catch (e) {
-        console.warn("Could not parse push JSON:", e);
-    }
+    try { data = event.data.json(); } catch (e) {}
 
     const title = data.title || "Love Frame <3";
+    const mediaUrl = data.mediaUrl;
+
+    // Broadcast to open window (if user is looking at the app)
+    if (mediaUrl) {
+        channel.postMessage({ type: 'MEDIA_UPDATE', url: mediaUrl });
+    }
+
     const options = {
         body: data.body || "Someone sent you love!",
-        icon: "/icon.png", // Make sure you actually have an icon.png in your folder!
-        data: { mediaUrl: data.mediaUrl || null }
+        icon: "/static/icon.png", // Verify this path exists!
+        data: { mediaUrl: mediaUrl }
     };
-
-    // FIX 1: Send message to open windows IMMEDIATELY upon receiving push
-    // This makes the image appear instantly if they are looking at the app
-    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then(clients => {
-        clients.forEach(client => {
-            if (data.mediaUrl) {
-                client.postMessage({ mediaUrl: data.mediaUrl });
-            }
-        });
-    });
 
     event.waitUntil(
         self.registration.showNotification(title, options)
@@ -37,32 +46,26 @@ self.addEventListener("notificationclick", (event) => {
     event.waitUntil(
         clients.matchAll({ type: "window", includeUncontrolled: true })
         .then(windowClients => {
-            // Check if there is already a window open
+            // A. If app is already open, focus it and update the picture
             for (let client of windowClients) {
-                // Focus the existing window
                 if (client.url && "focus" in client) {
-                    client.focus().then(() => {
-                        // After focusing, tell it to show the media
+                    return client.focus().then(() => {
                         if (mediaUrl) {
-                            client.postMessage({ mediaUrl });
+                            channel.postMessage({ type: 'MEDIA_UPDATE', url: mediaUrl });
                         }
                     });
-                    return; 
                 }
             }
 
-            // FIX 2: If no window is open, open a new one with the query param
+            // B. If app is closed, open a new window
             if (clients.openWindow) {
                 if (mediaUrl) {
-                    // Make sure the path is absolute
-                    return clients.openWindow(`/?media=${encodeURIComponent(mediaUrl)}`);
+                    // Use encoded URI to avoid "Blank Page" issues
+                    const newUrl = `/?media=${encodeURIComponent(mediaUrl)}`;
+                    return clients.openWindow(newUrl);
                 }
                 return clients.openWindow("/");
             }
         })
     );
-});
-
-self.addEventListener("activate", (event) => {
-    event.waitUntil(self.clients.claim());
 });
