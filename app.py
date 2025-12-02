@@ -100,6 +100,10 @@ def upload_media():
 def serve_media(filename):
     return send_from_directory(UPLOAD_FOLDER, filename)
 
+@app.get("/view/<path:filename>")
+def view_media(filename):
+    return render_template("view_media.html", media_url=f"/uploads/{filename}")
+
 # -------------------- SUBSCRIPTION ROUTES --------------------
 @app.post("/save-subscription")
 def save_subscription():
