@@ -135,4 +135,7 @@ def send_love():
     if remove_subs:
         for sub in remove_subs:
             subscriptions.remove(sub)
-        with o
+        with open(SUB_FILE, "w") as f:
+            json.dump(subscriptions, f)
+
+    return "Your love has been sent!"
