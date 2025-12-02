@@ -1,9 +1,3 @@
-if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/service-worker.js')
-        .then(() => console.log('Service Worker registered!'))
-        .catch(err => console.error('SW registration failed:', err));
-}
-
 self.addEventListener("push", (event) => {
     const data = event.data ? event.data.json() : {};
 
@@ -12,8 +6,7 @@ self.addEventListener("push", (event) => {
             body: data.body || "Someone sent you love!",
             icon: "/icon.png",
             data: { mediaUrl: data.mediaUrl || null }
-        })
-    );
+        }))
 });
 
 self.addEventListener("notificationclick", (event) => {
