@@ -2,26 +2,16 @@
 <html>
 <head>
     <title>Your Love Media</title>
-    <base href="/"> 
-    <style>
-        /* Optional: Add basic styling to ensure media is visible */
-        img, video {
-            max-width: 100%;
-            height: auto;
-            display: block;
-            margin: 0 auto;
-        }
-    </style>
 </head>
 <body>
     <h1>Someone sent you love!</h1>
     
     {% if media_url.endswith('.mp4') or media_url.endswith('.webm') %}
-        <video controls autoplay playsinline>
+        <video controls autoplay playsinline style="max-width:100%">
             <source src="{{ media_url }}">
         </video>
     {% elif media_url.endswith('.png') or media_url.endswith('.jpg') or media_url.endswith('.jpeg') or media_url.endswith('.gif') %}
-        <img src="{{ media_url }}" alt="Love Media">
+        <img src="{{ media_url }}" alt="Love Media" style="max-width:100%">
     {% else %}
         <p>Cannot display this media type.</p>
     {% endif %}
