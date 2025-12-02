@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <link rel="manifest" href="manifest.json">
+    <title>Love Frame 3</title>
+</head>
+<body>
+    <h1>Love Frame</h1>
+
+    <input id="mediaInput" type="file" accept="image/*,video/*" />
+    <button onclick="uploadMedia()">Send Photo/Video 3</button>
+    <button id="loveBtn">Send love 3</button>
+
+    <!-- This should appear now -->
+    <button id="enableNotifs">Enable Notifications</button>
+
+    <script>
+        // ---------------- Setup Push Notifications ----------------
+        async function setupNotifications() {
+            if (!("serviceWorker" in navigator)) {
+                alert("Service workers not supported");
+                return;
+            }
+
+            const reg = await navigator.serviceWorker.register("/static/sw.js");
+
+            const permission = await Notification.requestPermission();
+            if (permission !== "granted") {
+                alert("Please allow notifications otherwise some stuff might not work :(");
+                return;
+            }
+
+            const sub = await reg.pushManager.subscribe({
+                userVisibleOnly: true,
+                applicationServerKey: "replace later"
+            });
+
+            await fetch("/save-subscription", {
+                method: "POST",
+                body: JSON.stringify(sub),
+                headers: { "Content-Type": "application/json" }
+            });
+
+            alert("Notifications enabled! 3");
+        }
+
+        // ---- BUTTON FOR NOTIFS ----
+        document.getElementById("enableNotifs").onclick = () => {
+            setupNotifications();
+        };
+
+        // ---------------- Send Love Button ----------------
+        document.getElementById("loveBtn").onclick = () => {
+            fetch("/sendlove")
+                .then(res => res.text())
+                .then(msg => alert(msg))
+                .catch(err => alert("Failed to send love"));
+        };
+
+        // ---------------- Upload Media ----------------
+        async function uploadMedia() {
+            const fileInput = document.getElementById("mediaInput");
+            if (!fileInput.files.length) {
+                alert("Select a photo or video you silly!");
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append("media", fileInput.files[0]);
+
+            const response = await fetch("/uploads", {
+                method: "POST",
+                body: formData
+            });
+
+            if (response.ok) {
+                alert("Sent with love 3");
+            } else {
+                alert("Upload failed.");
+            }
+        }
+    </script>
+</body>
+</html>
