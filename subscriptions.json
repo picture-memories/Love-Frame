@@ -9,4 +9,3 @@ if os.path.exists(SUB_FILE):
         subscriptions = json.load(f)
 else:
     subscriptions = []
-
