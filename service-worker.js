@@ -1,15 +1,13 @@
 // service-worker.js
 
-const SW_VERSION = "3.0"; // Change this string whenever you update code to force a refresh!
-
 // 1. FORCE THE NEW VERSION TO TAKE OVER IMMEDIATELY
 self.addEventListener("install", (event) => {
-    // This tells the browser: "Don't wait! Activate this new version ASAP."
+    // Crucial: Forces the new worker to activate immediately, fixing the "waiting" issue
     self.skipWaiting(); 
 });
 
 self.addEventListener("activate", (event) => {
-    // This tells the browser: "Take control of all open tabs right now."
+    // Ensures the new worker takes control of all open pages right away
     event.waitUntil(self.clients.claim());
 });
 
@@ -18,7 +16,9 @@ const channel = new BroadcastChannel('love-channel');
 
 self.addEventListener("push", (event) => {
     let data = {};
-    try { data = event.data.json(); } catch (e) {}
+    try { data = event.data.json(); } catch (e) {
+        console.warn("Could not parse push JSON:", e);
+    }
 
     const title = data.title || "Love Frame <3";
     const mediaUrl = data.mediaUrl;
@@ -30,7 +30,7 @@ self.addEventListener("push", (event) => {
 
     const options = {
         body: data.body || "Someone sent you love!",
-        icon: "/static/icon.png", // Verify this path exists!
+        icon: "/icon.png", // Ensure this path is correct
         data: { mediaUrl: mediaUrl }
     };
 
@@ -39,6 +39,7 @@ self.addEventListener("push", (event) => {
     );
 });
 
+// 3. HANDLE NOTIFICATION CLICKS (Fix for "Blank Page")
 self.addEventListener("notificationclick", (event) => {
     event.notification.close();
     const mediaUrl = event.notification.data?.mediaUrl;
@@ -46,25 +47,28 @@ self.addEventListener("notificationclick", (event) => {
     event.waitUntil(
         clients.matchAll({ type: "window", includeUncontrolled: true })
         .then(windowClients => {
-            // A. If app is already open, focus it and update the picture
+            // Find existing window to focus
             for (let client of windowClients) {
                 if (client.url && "focus" in client) {
                     return client.focus().then(() => {
                         if (mediaUrl) {
+                            // Send message to the now-focused tab to show the media
                             channel.postMessage({ type: 'MEDIA_UPDATE', url: mediaUrl });
                         }
                     });
                 }
             }
 
-            // B. If app is closed, open a new window
+            // If no window is open, open a new one
             if (clients.openWindow) {
                 if (mediaUrl) {
-                    // Use encoded URI to avoid "Blank Page" issues
-                    const newUrl = `/?media=${encodeURIComponent(mediaUrl)}`;
+                    // Use ABSOLUTE URL to fix mobile PWA blank page issues
+                    const domain = "https://love-frame.onrender.com"; // <-- CRITICAL: VERIFY THIS IS YOUR EXACT DOMAIN
+                    const newUrl = `${domain}/?media=${encodeURIComponent(mediaUrl)}`;
+                    
                     return clients.openWindow(newUrl);
                 }
-                return clients.openWindow("/");
+                return clients.openWindow("/"); 
             }
         })
     );
