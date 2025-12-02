@@ -25,8 +25,7 @@ self.addEventListener("notificationclick", (event) => {
     const mediaUrl = event.notification.data?.mediaUrl;
 
     // Open the media if it exists, else open home page
-    event.waitUntil(
-        clients.openWindow(mediaUrl || "/")
+    media_url = f"/view/{filename}"
     );
 });
 
