@@ -96,7 +96,7 @@ def upload_media():
 
     return "OK"
 
-@app.get("/uploads/<path:filename>")
+@app.get("/view/<path:filename>")
 def serve_media(filename):
     return send_from_directory(UPLOAD_FOLDER, filename)
 
