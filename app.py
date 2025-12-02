@@ -23,6 +23,7 @@ def service_worker():
 # -------------------- HOME ROUTE --------------------
 @app.get("/")
 def home():
+    # index.html no longer needs to handle media= query param
     return render_template("index.html")
 
 # -------------------- LOVE MESSAGES --------------------
@@ -61,7 +62,6 @@ def upload_media():
     path = os.path.join(UPLOAD_FOLDER, filename)
     file.save(path)
 
-    # Absolute path sent to the Service Worker
     media_url = f"/uploads/{filename}"
 
     rnd_file = random.choice(LOVE_FILE)
@@ -98,6 +98,12 @@ def upload_media():
 def serve_media(filename):
     return send_from_directory(UPLOAD_FOLDER, filename)
 
+# *** THIS IS THE ROUTE NOW HANDLED BY THE NOTIFICATION CLICK ***
+@app.get("/view/<path:filename>")
+def view_media(filename):
+    # This renders the dedicated view_media.html template
+    return render_template("view_media.html", media_url=f"/uploads/{filename}")
+
 # -------------------- SUBSCRIPTION ROUTES --------------------
 @app.post("/save-subscription")
 def save_subscription():
@@ -111,14 +117,13 @@ def save_subscription():
 # -------------------- SEND LOVE MESSAGE --------------------
 @app.get("/sendlove")
 def send_love():
-    # ... (Sending logic is correct here) ...
     remove_subs = []
     for sub in subscriptions:
         try:
             payload = {
                 "title": "Love Alert <3",
                 "body": random.choice(LOVE_MESSAGES),
-                "mediaUrl": None # No media URL for a simple love message
+                "mediaUrl": None
             }
 
             webpush(
@@ -131,7 +136,6 @@ def send_love():
             print("Push Failed:", e)
             remove_subs.append(sub)
 
-    # Clean bad subscriptions
     if remove_subs:
         for sub in remove_subs:
             subscriptions.remove(sub)
