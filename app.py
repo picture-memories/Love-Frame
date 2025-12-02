@@ -8,6 +8,10 @@ subscriptions = []
 VAPID_PRIVATE_KEY = "ifdb_gOVdDOJQEroNgSqDenNI64-uIPHMRI4JWiKwek"
 VAPID_CLAIMS = {"sub": "mailto:zenovix05@gmail.com"}
 
+@app.route('/service-worker.js')
+def service_worker():
+    return send_from_directory('.', 'service-worker.js')
+
 # ---------------- HOME ROUTE ----------------
 @app.get("/")
 def home():
