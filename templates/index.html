@@ -12,76 +12,91 @@
     <input id="mediaInput" type="file" accept="image/*,video/*" />
     <button onclick="uploadMedia()">Send Photo/Video 3</button>
     <button id="loveBtn">Send love 3</button>
-
-    <!-- This should appear now -->
     <button id="enableNotifs">Enable Notifications</button>
 
     <script>
-        // ---------------- Setup Push Notifications ----------------
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('/service-worker.js')
-            .then(() => console.log('Service Worker registered!'))
-            .catch(err => console.error('SW registration failed:', err));
-            }
+        // ---------------- Helper to convert VAPID key ----------------
+        function urlBase64ToUint8Array(base64String) {
+            const padding = '='.repeat((4 - base64String.length % 4) % 4);
+            const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+            const rawData = window.atob(base64);
+            return Uint8Array.from([...rawData].map(c => c.charCodeAt(0)));
+        }
 
+        // ---------------- Setup Push Notifications ----------------
         async function setupNotifications() {
-            if (!("serviceWorker" in navigator)) {
+            if (!('serviceWorker' in navigator)) {
                 alert("Service workers not supported");
                 return;
             }
 
-            const permission = await Notification.requestPermission();
-            if (permission !== "granted") {
-                alert("Please allow notifications otherwise some stuff might not work :(");
-                return;
+            try {
+                // Register the service worker
+                const reg = await navigator.serviceWorker.register('/service-worker.js');
+                console.log('Service Worker registered!');
+
+                // Request notification permission
+                const permission = await Notification.requestPermission();
+                if (permission !== "granted") {
+                    alert("Please allow notifications!");
+                    return;
+                }
+
+                // Subscribe to push notifications
+                const sub = await reg.pushManager.subscribe({
+                    userVisibleOnly: true,
+                    applicationServerKey: urlBase64ToUint8Array(
+                        "BDufO492Sr7_QdxO_QVHGm3-nkJ7TddlcuBRSN9eI202SXrgd6MCvO0W_gCIdvzCyEcTI0N8afPKZy0Q4TWZpqY"
+                    )
+                });
+
+                // Save subscription to the server
+                await fetch("/save-subscription", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(sub)
+                });
+
+                alert("Notifications enabled! <3");
+
+            } catch (err) {
+                console.error("Failed to setup notifications:", err);
+                alert("Notifications setup failed");
             }
-
-            const sub = await reg.pushManager.subscribe({
-                userVisibleOnly: true,
-                applicationServerKey: "BDufO492Sr7_QdxO_QVHGm3-nkJ7TddlcuBRSN9eI202SXrgd6MCvO0W_gCIdvzCyEcTI0N8afPKZy0Q4TWZpqY"
-            });
-
-            await fetch("/save-subscription", {
-                method: "POST",
-                body: JSON.stringify(sub),
-                headers: { "Content-Type": "application/json" }
-            });
-
-            alert("Notifications enabled! 3");
         }
 
-        // ---- BUTTON FOR NOTIFS ----
-        document.getElementById("enableNotifs").onclick = () => {
-            setupNotifications();
-        };
+        document.getElementById("enableNotifs").onclick = () => setupNotifications();
 
         // ---------------- Send Love Button ----------------
-        document.getElementById("loveBtn").onclick = () => {
-            fetch("/sendlove")
-                .then(res => res.text())
-                .then(msg => alert(msg))
-                .catch(err => alert("Failed to send love"));
+        document.getElementById("loveBtn").onclick = async () => {
+            try {
+                const res = await fetch("/sendlove");
+                const msg = await res.text();
+                alert(msg);
+            } catch (err) {
+                alert("Failed to send love");
+            }
         };
 
         // ---------------- Upload Media ----------------
         async function uploadMedia() {
             const fileInput = document.getElementById("mediaInput");
             if (!fileInput.files.length) {
-                alert("Select a photo or video you silly!");
+                alert("Select a photo or video!");
                 return;
             }
 
             const formData = new FormData();
             formData.append("media", fileInput.files[0]);
 
-            const response = await fetch("/uploads", {
-                method: "POST",
-                body: formData
-            });
-
-            if (response.ok) {
-                alert("Sent with love 3");
-            } else {
+            try {
+                const response = await fetch("/uploads", { method: "POST", body: formData });
+                if (response.ok) {
+                    alert("Sent with love <3");
+                } else {
+                    alert("Upload failed.");
+                }
+            } catch (err) {
                 alert("Upload failed.");
             }
         }
