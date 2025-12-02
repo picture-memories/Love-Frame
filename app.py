@@ -4,11 +4,10 @@ import random
 import os
 import json
 
-app = Flask(__name__)  # MUST come first
+app = Flask(__name__)
 
 # -------------------- Persistent Subscriptions --------------------
 SUB_FILE = "subscriptions.json"
-
 if os.path.exists(SUB_FILE):
     with open(SUB_FILE, "r") as f:
         subscriptions = json.load(f)
@@ -64,7 +63,8 @@ def upload_media():
     path = os.path.join(UPLOAD_FOLDER, filename)
     file.save(path)
 
-    media_url = f"/uploads/{filename}"
+    # Use /view/<filename> instead of raw file to avoid blank page on iOS
+    media_url = f"/view/{filename}"
 
     rnd_file = random.choice(LOVE_FILE)
     data = {
@@ -73,7 +73,6 @@ def upload_media():
         "mediaUrl": media_url
     }
 
-    # Send push notifications to all saved subscriptions
     remove_subs = []
     for sub in subscriptions:
         try:
@@ -85,9 +84,8 @@ def upload_media():
             )
         except WebPushException as e:
             print("Push error:", e)
-            remove_subs.append(sub)  # remove invalid subscriptions
+            remove_subs.append(sub)
 
-    # Update the JSON file if any subscriptions were removed
     if remove_subs:
         for sub in remove_subs:
             subscriptions.remove(sub)
@@ -96,7 +94,7 @@ def upload_media():
 
     return "OK"
 
-@app.get("/view/<path:filename>")
+@app.get("/uploads/<path:filename>")
 def serve_media(filename):
     return send_from_directory(UPLOAD_FOLDER, filename)
 
@@ -108,12 +106,10 @@ def view_media(filename):
 @app.post("/save-subscription")
 def save_subscription():
     sub = request.get_json()
-
     if sub not in subscriptions:
         subscriptions.append(sub)
         with open(SUB_FILE, "w") as f:
             json.dump(subscriptions, f)
-
     return "OK"
 
 # -------------------- SEND LOVE --------------------
@@ -136,11 +132,7 @@ def send_love():
             print("Push Failed:", e)
             remove_subs.append(sub)
 
-    # Remove invalid subscriptions
     if remove_subs:
         for sub in remove_subs:
             subscriptions.remove(sub)
-        with open(SUB_FILE, "w") as f:
-            json.dump(subscriptions, f)
-
-    return "Your love has been sent!"
+        with o
