@@ -12,8 +12,8 @@ self.addEventListener("push", (event) => {
     event.waitUntil(
         self.registration.showNotification(data.title || "Love Frame <3", {
             body: data.body || "Someone sent you love!",
-            icon: "/icon.png",           // Make sure this icon exists in /static
-            data: { mediaUrl: data.mediaUrl || null }
+            icon: "/icon.png",           // Make sure this exists in /static
+            data: { mediaUrl: data.mediaUrl || "/" }
         })
     );
 });
@@ -21,15 +21,25 @@ self.addEventListener("push", (event) => {
 // Handle notification clicks
 self.addEventListener("notificationclick", (event) => {
     event.notification.close();
+    const mediaUrl = event.notification.data?.mediaUrl || "/";
 
-    const mediaUrl = event.notification.data?.mediaUrl;
-
-    // Open the media if it exists, else open home page
-    media_url = f"/view/{filename}"
+    event.waitUntil(
+        clients.matchAll({ type: "window", includeUncontrolled: true }).then(windowClients => {
+            for (let client of windowClients) {
+                // If a tab is already open with this media, focus it
+                if (client.url.includes(mediaUrl) && 'focus' in client) {
+                    return client.focus();
+                }
+            }
+            // Otherwise, open a new tab
+            if (clients.openWindow) {
+                return clients.openWindow(mediaUrl);
+            }
+        })
     );
 });
 
-// Optional: activate and claim clients immediately
+// Optional: claim clients immediately
 self.addEventListener("activate", (event) => {
     event.waitUntil(self.clients.claim());
 });
