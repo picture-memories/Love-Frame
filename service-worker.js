@@ -1,25 +1,35 @@
-// Handle Push Notification
+// service-worker.js
+
 self.addEventListener("push", (event) => {
     let data = {};
     try {
-        data = event.data.json();  // NOW WORKS
+        data = event.data.json();
     } catch (e) {
         console.warn("Could not parse push JSON:", e);
     }
 
-    event.waitUntil(
-        self.registration.showNotification(
-            data.title || "Love Frame <3",
-            {
-                body: data.body || "Someone sent you love!",
-                icon: "/icon.png",
-                data: { mediaUrl: data.mediaUrl || null }
+    const title = data.title || "Love Frame <3";
+    const options = {
+        body: data.body || "Someone sent you love!",
+        icon: "/icon.png", // Make sure you actually have an icon.png in your folder!
+        data: { mediaUrl: data.mediaUrl || null }
+    };
+
+    // FIX 1: Send message to open windows IMMEDIATELY upon receiving push
+    // This makes the image appear instantly if they are looking at the app
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then(clients => {
+        clients.forEach(client => {
+            if (data.mediaUrl) {
+                client.postMessage({ mediaUrl: data.mediaUrl });
             }
-        )
+        });
+    });
+
+    event.waitUntil(
+        self.registration.showNotification(title, options)
     );
 });
 
-// Notification Click
 self.addEventListener("notificationclick", (event) => {
     event.notification.close();
     const mediaUrl = event.notification.data?.mediaUrl;
@@ -27,19 +37,24 @@ self.addEventListener("notificationclick", (event) => {
     event.waitUntil(
         clients.matchAll({ type: "window", includeUncontrolled: true })
         .then(windowClients => {
+            // Check if there is already a window open
             for (let client of windowClients) {
-                // Focus existing tab
-                if ("focus" in client) {
-                    client.focus();
-                    // Tell tab to show media
-                    client.postMessage({ mediaUrl });
-                    return;
+                // Focus the existing window
+                if (client.url && "focus" in client) {
+                    client.focus().then(() => {
+                        // After focusing, tell it to show the media
+                        if (mediaUrl) {
+                            client.postMessage({ mediaUrl });
+                        }
+                    });
+                    return; 
                 }
             }
 
-            // No open tab → open new one
+            // FIX 2: If no window is open, open a new one with the query param
             if (clients.openWindow) {
                 if (mediaUrl) {
+                    // Make sure the path is absolute
                     return clients.openWindow(`/?media=${encodeURIComponent(mediaUrl)}`);
                 }
                 return clients.openWindow("/");
@@ -48,7 +63,6 @@ self.addEventListener("notificationclick", (event) => {
     );
 });
 
-// Ensure SW controls all pages immediately
 self.addEventListener("activate", (event) => {
     event.waitUntil(self.clients.claim());
 });
