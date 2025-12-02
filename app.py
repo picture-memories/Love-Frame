@@ -29,8 +29,8 @@ def home():
 LOVE_FILE = [
     "Your love has sent you a photo/video <3",
     "Your sweetheart has sent you a photo/video <3",
-    "Your angel has send you a photo/video <3",
-    "Your partner has send you a photo/video <3",
+    "Your angel has sent you a photo/video <3",
+    "Your partner has sent you a photo/video <3",
     "They love you so much and they just sent you a photo/video! <3"
 ]
 
@@ -61,21 +61,23 @@ def upload_media():
     path = os.path.join(UPLOAD_FOLDER, filename)
     file.save(path)
 
-    media_url = f"/view/{filename}"  # Always use /view/ route
+    # IMPORTANT: Always send /uploads path to the website
+    media_url = f"/uploads/{filename}"
 
     rnd_file = random.choice(LOVE_FILE)
-    data = {
+    payload = {
         "title": "New Media <3",
         "body": rnd_file,
         "mediaUrl": media_url
     }
 
+    # Send notifications
     remove_subs = []
     for sub in subscriptions:
         try:
             webpush(
                 subscription_info=sub,
-                data=str(data),
+                data=json.dumps(payload),  # JSON FIXED
                 vapid_private_key=VAPID_PRIVATE_KEY,
                 vapid_claims=VAPID_CLAIMS
             )
@@ -83,6 +85,7 @@ def upload_media():
             print("Push error:", e)
             remove_subs.append(sub)
 
+    # Clean invalid subscriptions
     if remove_subs:
         for sub in remove_subs:
             subscriptions.remove(sub)
@@ -95,6 +98,7 @@ def upload_media():
 def serve_media(filename):
     return send_from_directory(UPLOAD_FOLDER, filename)
 
+# OPTIONAL: still allow manual viewing
 @app.get("/view/<path:filename>")
 def view_media(filename):
     return render_template("view_media.html", media_url=f"/uploads/{filename}")
@@ -109,19 +113,21 @@ def save_subscription():
             json.dump(subscriptions, f)
     return "OK"
 
-# -------------------- SEND LOVE --------------------
+# -------------------- SEND LOVE MESSAGE --------------------
 @app.get("/sendlove")
 def send_love():
     remove_subs = []
     for sub in subscriptions:
         try:
-            rnd_msg = random.choice(LOVE_MESSAGES)
+            payload = {
+                "title": "Love Alert <3",
+                "body": random.choice(LOVE_MESSAGES),
+                "mediaUrl": None
+            }
+
             webpush(
                 subscription_info=sub,
-                data=str({
-                    "title": "Love Alert <3",
-                    "body": rnd_msg
-                }),
+                data=json.dumps(payload),  # JSON FIXED
                 vapid_private_key=VAPID_PRIVATE_KEY,
                 vapid_claims=VAPID_CLAIMS
             )
@@ -129,6 +135,7 @@ def send_love():
             print("Push Failed:", e)
             remove_subs.append(sub)
 
+    # Clean bad subscriptions
     if remove_subs:
         for sub in remove_subs:
             subscriptions.remove(sub)
