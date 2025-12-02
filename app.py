@@ -32,7 +32,7 @@ LOVE_MESSAGES = [
     "They wish we could be irl together, and are determined to make that a reality one day <3",
     "They think they are the luckiest person in all of existence to be with you!! <3",
     "You are their sweet angel!! And they love you so much <3",
-    "You are their sweetheart!! And they love you so much <3",
+    "You are their sweetheart!! And they love you so much <3"
 ]
 
 # ---------------- UPLOAD HANDLING ----------------
@@ -99,6 +99,3 @@ def send_love():
             print("Push Failed:", e)
 
     return "Your love has been sent!"
-
-# ---------------- RUN SERVER ----------------
-app.run(host="0.0.0.0", port=5000)
