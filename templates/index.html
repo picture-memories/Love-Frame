@@ -10,9 +10,11 @@
     <h1>Love Frame</h1>
 
     <input id="mediaInput" type="file" accept="image/*,video/*" />
-    <button onclick="uploadMedia()">Send Photo/Video 3</button>
-    <button id="loveBtn">Send love 3</button>
+    <button onclick="uploadMedia()">Send Photo/Video</button>
+    <button id="loveBtn">Send love</button>
     <button id="enableNotifs">Enable Notifications</button>
+
+    <div id="mediaContainer"></div>
 
     <script>
         // ---------------- Helper to convert VAPID key ----------------
@@ -31,18 +33,15 @@
             }
 
             try {
-                // Register the service worker
                 const reg = await navigator.serviceWorker.register('/service-worker.js');
                 console.log('Service Worker registered!');
 
-                // Request notification permission
                 const permission = await Notification.requestPermission();
                 if (permission !== "granted") {
                     alert("Please allow notifications!");
                     return;
                 }
 
-                // Subscribe to push notifications
                 const sub = await reg.pushManager.subscribe({
                     userVisibleOnly: true,
                     applicationServerKey: urlBase64ToUint8Array(
@@ -50,7 +49,6 @@
                     )
                 });
 
-                // Save subscription to the server
                 await fetch("/save-subscription", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
@@ -99,6 +97,41 @@
             } catch (err) {
                 alert("Upload failed.");
             }
+        }
+
+        // ---------------- Display Media ----------------
+        function showMedia(mediaUrl) {
+            const container = document.getElementById("mediaContainer");
+            container.innerHTML = "";
+            if (mediaUrl.endsWith(".mp4") || mediaUrl.endsWith(".webm")) {
+                const video = document.createElement("video");
+                video.src = mediaUrl;
+                video.controls = true;
+                video.autoplay = true;
+                container.appendChild(video);
+            } else if (/\.(png|jpg|jpeg|gif)$/i.test(mediaUrl)) {
+                const img = document.createElement("img");
+                img.src = mediaUrl;
+                container.appendChild(img);
+            }
+            const back = document.createElement("p");
+            back.innerHTML = `<a href="/">Back to home</a>`;
+            container.appendChild(back);
+        }
+
+        // ---------------- Check URL param ----------------
+        const params = new URLSearchParams(window.location.search);
+        if (params.has("media")) {
+            showMedia(params.get("media"));
+        }
+
+        // ---------------- Listen for messages from SW ----------------
+        if (navigator.serviceWorker) {
+            navigator.serviceWorker.addEventListener('message', event => {
+                if (event.data?.mediaUrl) {
+                    showMedia(event.data.mediaUrl);
+                }
+            });
         }
     </script>
 </body>
