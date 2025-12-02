@@ -10,7 +10,7 @@ self.addEventListener("push", (event) => {
     event.waitUntil(
         self.registration.showNotification(data.title || "Love Frame <3", {
             body: data.body || "Someone sent you love!",
-            icon: "/icon.png",           // Make sure this exists
+            icon: "/icon.png",
             data: { mediaUrl: data.mediaUrl || null }
         })
     );
@@ -24,15 +24,16 @@ self.addEventListener("notificationclick", (event) => {
     event.waitUntil(
         clients.matchAll({ type: "window", includeUncontrolled: true }).then(windowClients => {
             for (let client of windowClients) {
-                // Focus existing tab and send media URL
                 if ('focus' in client) {
-                    client.postMessage({ mediaUrl });
-                    return client.focus();
+                    client.focus();
+                    if (mediaUrl) {
+                        client.navigate(`/?media=${encodeURIComponent(mediaUrl)}`);
+                    }
+                    return;
                 }
             }
-            // Open new tab with media query param if no tab is open
             if (clients.openWindow) {
-                return clients.openWindow(`/?media=${encodeURIComponent(mediaUrl)}`);
+                return clients.openWindow(mediaUrl ? `/?media=${encodeURIComponent(mediaUrl)}` : "/");
             }
         })
     );
