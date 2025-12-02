@@ -7,16 +7,6 @@
     <p><a href="/">Back to home</a></p>
     <h1>Someone sent you love!</h1>
     
-    {% if media_url.endswith('.mp4') or media_url.endswith('.webm') %}
-        <video controls autoplay playsinline style="max-width:100%">
-            <source src="{{ media_url }}">
-        </video>
-    {% elif media_url.endswith('.png') or media_url.endswith('.jpg') or media_url.endswith('.jpeg') or media_url.endswith('.gif') %}
-        <img src="{{ media_url }}" alt="Love Media" style="max-width:100%">
-    {% else %}
-        <p>Cannot display this media type.</p>
-    {% endif %}
-    
     <p><a href="/">Back to home</a></p>
 </body>
 </html>
