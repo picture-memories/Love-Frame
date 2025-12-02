@@ -1,3 +1,4 @@
 flask
 pywebpush
 gunicorn
+Werkzeug==2.3.0
