@@ -2,12 +2,10 @@
 
 // 1. FORCE THE NEW VERSION TO TAKE OVER IMMEDIATELY
 self.addEventListener("install", (event) => {
-    // Crucial: Forces the new worker to activate immediately, fixing the "waiting" issue
     self.skipWaiting(); 
 });
 
 self.addEventListener("activate", (event) => {
-    // Ensures the new worker takes control of all open pages right away
     event.waitUntil(self.clients.claim());
 });
 
@@ -23,14 +21,14 @@ self.addEventListener("push", (event) => {
     const title = data.title || "Love Frame <3";
     const mediaUrl = data.mediaUrl;
 
-    // Broadcast to open window (if user is looking at the app)
+    // Broadcast to open window (solves the "doesn't open while being in the app" issue)
     if (mediaUrl) {
         channel.postMessage({ type: 'MEDIA_UPDATE', url: mediaUrl });
     }
 
     const options = {
         body: data.body || "Someone sent you love!",
-        icon: "/icon.png", // Ensure this path is correct
+        icon: "/icon.png", 
         data: { mediaUrl: mediaUrl }
     };
 
@@ -59,12 +57,15 @@ self.addEventListener("notificationclick", (event) => {
                 }
             }
 
-            // If no window is open, open a new one
+            // If no window is open, open a new one directly to the Flask view route
             if (clients.openWindow) {
                 if (mediaUrl) {
-                    // Use ABSOLUTE URL to fix mobile PWA blank page issues
-                    const domain = "https://love-frame.onrender.com"; // <-- CRITICAL: VERIFY THIS IS YOUR EXACT DOMAIN
-                    const newUrl = `${domain}/?media=${encodeURIComponent(mediaUrl)}`;
+                    // 1. Get just the filename (e.g., "my_photo.jpg")
+                    const filename = mediaUrl.replace(/^\/uploads\//, ''); 
+                    
+                    // 2. Build the ABSOLUTE URL for the dedicated /view/ route
+                    const domain = "https://love-frame.onrender.com"; // <-- VERIFY THIS IS YOUR EXACT DOMAIN
+                    const newUrl = `${domain}/view/${filename}`;
                     
                     return clients.openWindow(newUrl);
                 }
