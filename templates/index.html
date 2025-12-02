@@ -27,10 +27,10 @@
     <div id="mediaContainer"></div>
 
     <script>
-        // Use a high version log to confirm this code is running
-        console.log("Love App Version: 3.1 (Final Fixes Applied)");
+        // Version Log
+        console.log("Love App Version: 4.0 (View Route Bypass)");
 
-        // 1. SETUP THE RADIO CHANNEL (Listens for updates from Service Worker)
+        // 1. SETUP THE RADIO CHANNEL (Listens for in-app updates from Service Worker)
         const channel = new BroadcastChannel('love-channel');
 
         channel.onmessage = (event) => {
@@ -49,18 +49,15 @@
 
         function showMedia(url) {
             const box = document.getElementById("mediaContainer");
-            box.innerHTML = ""; // Clear old stuff
-            
-            // Ensure URL is clean
+            box.innerHTML = "";
             const cleanUrl = decodeURIComponent(url);
 
             if (cleanUrl.match(/\.(mp4|webm)$/i)) {
-                // added playsinline for better mobile video support
                 box.innerHTML = `<video controls autoplay playsinline src="${cleanUrl}"></video>`;
             } else if (cleanUrl.match(/\.(png|jpg|jpeg|gif)$/i)) {
                 box.innerHTML = `<img src="${cleanUrl}" />`;
             } else {
-                 box.innerHTML = `<p>Cannot display this media type: ${cleanUrl}</p>`;
+                 box.innerHTML = `<p>Cannot display this media type.</p>`;
             }
 
             box.innerHTML += `<p><a href="/">Back to home</a></p>`;
@@ -87,16 +84,14 @@
             btn.innerText = "Send Photo/Video";
         }
 
-        // 3. SETUP NOTIFICATIONS & SERVICE WORKER
+        // 3. SETUP NOTIFICATIONS
         async function setupNotifications() {
             const reg = await navigator.serviceWorker.register("/service-worker.js");
-
             const permission = await Notification.requestPermission();
             if (permission !== "granted") return alert("Please allow notifications!");
 
             const sub = await reg.pushManager.subscribe({
                 userVisibleOnly: true,
-                // Replace with your actual key if different
                 applicationServerKey: urlBase64ToUint8Array("BDufO492Sr7_QdxO_QVHGm3-nkJ7TddlcuBRSN9eI202SXrgd6MCvO0W_gCIdvzCyEcTI0N8afPKZy0Q4TWZpqY")
             });
 
@@ -114,12 +109,8 @@
             const res = await fetch("/sendlove");
             alert(await res.text());
         };
-
-        // 4. CHECK URL ON LOAD (Handles the initial notification click load)
-        const params = new URLSearchParams(location.search);
-        if (params.has("media")) {
-            showMedia(params.get("media"));
-        }
+        
+        // REMOVED: URL parameter check as the notification click now goes to /view/filename
     </script>
 </body>
 </html>
