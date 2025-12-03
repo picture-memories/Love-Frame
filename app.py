@@ -8,7 +8,7 @@ app = Flask(__name__)
 subscriptions = []
 
 # -------------------- VAPID CONFIG --------------------
-VAPID_PRIVATE_KEY = "Dlzka-UcJSpxRNQBDJo9xFEGx8zhrZzLnFwQ3uGTV48"
+VAPID_PRIVATE_KEY = "ifdb_gOVdDOJQEroNgSqDenNI64-uIPHMRI4JWiKwek"
 VAPID_CLAIMS = {"sub": "mailto:zenovix05@gmail.com"}
 
 # -------------------- Service Worker --------------------
