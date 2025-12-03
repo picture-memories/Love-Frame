@@ -27,50 +27,59 @@
 
     <script>
         const VAPID_PUBLIC_KEY = "BDufO492Sr7_QdxO_QVHGm3-nkJ7TddlcuBRSN9eI202SXrgd6MCvO0W_gCIdvzCyEcTI0N8afPKZy0Q4TWZpqY";
-
+    
+        // Generate or reuse a unique senderId per device
+        let senderId = localStorage.getItem("senderId");
+        if (!senderId) {
+            senderId = crypto.randomUUID();
+            localStorage.setItem("senderId", senderId);
+        }
+    
         function urlBase64ToUint8Array(base64String) {
             const padding = '='.repeat((4 - base64String.length % 4) % 4);
             const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
             return Uint8Array.from(atob(base64), c => c.charCodeAt(0));
         }
-
+    
         async function setupNotifications() {
-            console.log("Registering service worker...");
             const reg = await navigator.serviceWorker.register("/service-worker.js");
-
             const permission = await Notification.requestPermission();
             if (permission !== "granted") {
                 alert("Please allow notifications to continue.");
                 return;
             }
-
+    
             const oldSub = await reg.pushManager.getSubscription();
             if (oldSub) await oldSub.unsubscribe();
-
+    
             const newSub = await reg.pushManager.subscribe({
                 userVisibleOnly: true,
                 applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
             });
-
+    
             console.log("Subscription created:", newSub);
-
+    
             await fetch("/save-subscription", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(newSub)
+                body: JSON.stringify({ senderId, subscription: newSub })
             });
-
+    
             alert("Notifications enabled successfully! <3");
         }
-
+    
         document.getElementById("enableNotifs").onclick = setupNotifications;
-
+    
         // Send love button handler
         document.getElementById("loveBtn").onclick = async () => {
-            const res = await fetch("/sendlove");
+            const res = await fetch("/sendlove", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ senderId })
+            });
             if (res.ok) alert("Love sent!");
         };
-
+    
         // Upload media function
         async function uploadMedia() {
             const fileInput = document.getElementById("mediaInput");
@@ -78,17 +87,14 @@
                 alert("Please select a file first!");
                 return;
             }
-
+    
             const formData = new FormData();
             formData.append("media", fileInput.files[0]);
-
-            const res = await fetch("/uploads", {
-                method: "POST",
-                body: formData
-            });
-
+    
+            const res = await fetch("/uploads", { method: "POST", body: formData });
             if (res.ok) alert("Media sent!");
         }
     </script>
+
 </body>
 </html>
