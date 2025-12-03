@@ -4,8 +4,23 @@ import random, os, json
 
 app = Flask(__name__)
 
-# -------------------- In-memory Subscriptions (Temporary) --------------------
-subscriptions = []
+# -------------------- PERSISTENT SUBSCRIPTIONS --------------------
+SUBS_FILE = "subscriptions.json"
+
+def load_subscriptions():
+    """Load subscriptions from JSON file."""
+    if not os.path.exists(SUBS_FILE):
+        return []
+    with open(SUBS_FILE, "r") as f:
+        try:
+            return json.load(f)
+        except json.JSONDecodeError:
+            return []
+
+def save_subscriptions(subs):
+    """Save subscriptions to JSON file."""
+    with open(SUBS_FILE, "w") as f:
+        json.dump(subs, f)
 
 # -------------------- VAPID CONFIG --------------------
 VAPID_PRIVATE_KEY = "ifdb_gOVdDOJQEroNgSqDenNI64-uIPHMRI4JWiKwek"
@@ -57,9 +72,7 @@ def upload_media():
     path = os.path.join(UPLOAD_FOLDER, filename)
     file.save(path)
 
-    # Send the /view URL
     media_url = f"/view/{filename}"
-
     rnd_file = random.choice(LOVE_FILE)
     payload = {
         "title": "New Media <3",
@@ -67,8 +80,10 @@ def upload_media():
         "mediaUrl": media_url
     }
 
+    subs = load_subscriptions()
     remove_subs = []
-    for sub in subscriptions:
+
+    for sub in subs:
         try:
             webpush(
                 subscription_info=sub,
@@ -76,12 +91,14 @@ def upload_media():
                 vapid_private_key=VAPID_PRIVATE_KEY,
                 vapid_claims=VAPID_CLAIMS
             )
+            print(f"Sent push to {sub['endpoint']}")
         except WebPushException as e:
             print("Push error (removing sub):", e)
             remove_subs.append(sub)
 
-    for sub in remove_subs:
-        subscriptions.remove(sub)
+    if remove_subs:
+        subs = [s for s in subs if s not in remove_subs]
+        save_subscriptions(subs)
 
     return "OK"
 
@@ -99,34 +116,41 @@ def view_media(filename):
 @app.post("/save-subscription")
 def save_subscription():
     sub = request.get_json()
-    if sub not in subscriptions:
-        subscriptions.append(sub)
+    subs = load_subscriptions()
+    
+    if sub not in subs:
+        subs.append(sub)
+        save_subscriptions(subs)
         print("New subscription added:", sub)
+
     return "OK"
 
 # -------------------- SEND LOVE MESSAGE --------------------
 @app.get("/sendlove")
 def send_love():
+    subs = load_subscriptions()
     remove_subs = []
-    for sub in subscriptions:
+
+    for sub in subs:
         try:
             payload = {
                 "title": "Love Alert <3",
                 "body": random.choice(LOVE_MESSAGES),
                 "mediaUrl": None
             }
-
             webpush(
                 subscription_info=sub,
                 data=json.dumps(payload),
                 vapid_private_key=VAPID_PRIVATE_KEY,
                 vapid_claims=VAPID_CLAIMS
             )
+            print(f"Sent push to {sub['endpoint']}")
         except WebPushException as e:
             print("Push Failed:", e)
             remove_subs.append(sub)
 
-    for sub in remove_subs:
-        subscriptions.remove(sub)
+    if remove_subs:
+        subs = [s for s in subs if s not in remove_subs]
+        save_subscriptions(subs)
 
     return "Your love has been sent!"
