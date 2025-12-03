@@ -4,14 +4,10 @@ import random, os, json
 
 app = Flask(__name__)
 
-# -------------------- Persistent Subscriptions --------------------
-SUB_FILE = "subscriptions.json"
-if os.path.exists(SUB_FILE):
-    with open(SUB_FILE, "r") as f:
-        subscriptions = json.load(f)
-else:
-    subscriptions = []
+# -------------------- In-memory Subscriptions (Temporary) --------------------
+subscriptions = []
 
+# -------------------- VAPID CONFIG --------------------
 VAPID_PRIVATE_KEY = "Dlzka-UcJSpxRNQBDJo9xFEGx8zhrZzLnFwQ3uGTV48"
 VAPID_CLAIMS = {"sub": "mailto:zenovix05@gmail.com"}
 
@@ -61,7 +57,7 @@ def upload_media():
     path = os.path.join(UPLOAD_FOLDER, filename)
     file.save(path)
 
-    # MAIN FIX: send the /view URL, not /uploads
+    # Send the /view URL
     media_url = f"/view/{filename}"
 
     rnd_file = random.choice(LOVE_FILE)
@@ -84,11 +80,8 @@ def upload_media():
             print("Push error (removing sub):", e)
             remove_subs.append(sub)
 
-    if remove_subs:
-        for sub in remove_subs:
-            subscriptions.remove(sub)
-        with open(SUB_FILE, "w") as f:
-            json.dump(subscriptions, f)
+    for sub in remove_subs:
+        subscriptions.remove(sub)
 
     return "OK"
 
@@ -96,23 +89,19 @@ def upload_media():
 def serve_media(filename):
     return send_from_directory(UPLOAD_FOLDER, filename)
 
-# -------------------- VIEW ROUTE (Shows media nicely) --------------------
+# -------------------- VIEW ROUTE --------------------
 @app.get("/view/<path:filename>")
 def view_media(filename):
-
-    # Create absolute URL to actual uploaded file
     uploaded_url = url_for('serve_media', filename=filename, _external=True)
-
     return render_template("view_media.html", media_url=uploaded_url)
 
-# -------------------- SUBSCRIPTION ROUTES --------------------
+# -------------------- SUBSCRIPTION ROUTE --------------------
 @app.post("/save-subscription")
 def save_subscription():
     sub = request.get_json()
     if sub not in subscriptions:
         subscriptions.append(sub)
-        with open(SUB_FILE, "w") as f:
-            json.dump(subscriptions, f)
+        print("New subscription added:", sub)
     return "OK"
 
 # -------------------- SEND LOVE MESSAGE --------------------
@@ -137,10 +126,7 @@ def send_love():
             print("Push Failed:", e)
             remove_subs.append(sub)
 
-    if remove_subs:
-        for sub in remove_subs:
-            subscriptions.remove(sub)
-        with open(SUB_FILE, "w") as f:
-            json.dump(subscriptions, f)
+    for sub in remove_subs:
+        subscriptions.remove(sub)
 
     return "Your love has been sent!"
