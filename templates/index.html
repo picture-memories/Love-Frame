@@ -7,8 +7,6 @@
     <title>Love Frame &lt; 3</title>
 
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
-
-    
 </head>
 <body>
     <h1>Love Frame &lt; 3</h1>
@@ -28,54 +26,69 @@
     <div id="mediaContainer"></div>
 
     <script>
-        // Convert VAPID public key
+        const VAPID_PUBLIC_KEY = "BDufO492Sr7_QdxO_QVHGm3-nkJ7TddlcuBRSN9eI202SXrgd6MCvO0W_gCIdvzCyEcTI0N8afPKZy0Q4TWZpqY";
+
         function urlBase64ToUint8Array(base64String) {
             const padding = '='.repeat((4 - base64String.length % 4) % 4);
             const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
             return Uint8Array.from(atob(base64), c => c.charCodeAt(0));
         }
-    
-        const VAPID_PUBLIC_KEY = "BDufO492Sr7_QdxO_QVHGm3-nkJ7TddlcuBRSN9eI202SXrgd6MCvO0W_gCIdvzCyEcTI0N8afPKZy0Q4TWZpqY";
-    
+
         async function setupNotifications() {
             console.log("Registering service worker...");
             const reg = await navigator.serviceWorker.register("/service-worker.js");
-    
-            // 1. Ask permission
+
             const permission = await Notification.requestPermission();
             if (permission !== "granted") {
                 alert("Please allow notifications to continue.");
                 return;
             }
-    
-            // 2. Remove old subscription (prevents BadJwtToken)
+
             const oldSub = await reg.pushManager.getSubscription();
-            if (oldSub) {
-                console.log("Unsubscribing old push subscription...");
-                await oldSub.unsubscribe();
-            }
-    
-            // 3. Create NEW subscription with NEW VAPID key
-            console.log("Creating new push subscription...");
+            if (oldSub) await oldSub.unsubscribe();
+
             const newSub = await reg.pushManager.subscribe({
                 userVisibleOnly: true,
                 applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
             });
-    
+
             console.log("Subscription created:", newSub);
-    
-            // 4. Save subscription to server
+
             await fetch("/save-subscription", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(newSub)
             });
-    
+
             alert("Notifications enabled successfully! <3");
         }
-    
-        document.getElementById("enableNotifs").onclick = setupNotifications;
-    </script>
 
+        document.getElementById("enableNotifs").onclick = setupNotifications;
+
+        // Send love button handler
+        document.getElementById("loveBtn").onclick = async () => {
+            const res = await fetch("/sendlove");
+            if (res.ok) alert("Love sent!");
+        };
+
+        // Upload media function
+        async function uploadMedia() {
+            const fileInput = document.getElementById("mediaInput");
+            if (!fileInput.files.length) {
+                alert("Please select a file first!");
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append("media", fileInput.files[0]);
+
+            const res = await fetch("/uploads", {
+                method: "POST",
+                body: formData
+            });
+
+            if (res.ok) alert("Media sent!");
+        }
+    </script>
 </body>
 </html>
