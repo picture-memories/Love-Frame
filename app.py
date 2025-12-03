@@ -84,12 +84,12 @@ def upload_media():
     for sub in subs:
         try:
             webpush(
-                subscription_info=sub,
+                subscription_info=sub["subscription"],
                 data=json.dumps(payload),
                 vapid_private_key=VAPID_PRIVATE_KEY,
                 vapid_claims=VAPID_CLAIMS
             )
-            print(f"Sent push to {sub['endpoint']}")
+            print(f"Sent push to {sub['subscription']['endpoint']}")
         except WebPushException as e:
             print("Push error (removing sub):", e)
             remove_subs.append(sub)
@@ -113,23 +113,37 @@ def view_media(filename):
 # -------------------- SUBSCRIPTION ROUTE --------------------
 @app.post("/save-subscription")
 def save_subscription():
-    sub = request.get_json()
-    subs = load_subscriptions()
-    
-    if sub not in subs:
-        subs.append(sub)
-        save_subscriptions(subs)
-        print("New subscription added:", sub)
+    data = request.get_json()
+    sender_id = data.get("senderId")
+    subscription = data.get("subscription")
 
+    if not sender_id or not subscription:
+        return "Missing senderId or subscription", 400
+
+    subs = load_subscriptions()
+    subs = [s for s in subs if s.get("senderId") != sender_id]  # remove old
+    subs.append({"senderId": sender_id, "subscription": subscription})
+    save_subscriptions(subs)
+
+    print("New subscription added:", subscription)
     return "OK"
 
 # -------------------- SEND LOVE MESSAGE --------------------
-@app.get("/sendlove")
+@app.post("/sendlove")
 def send_love():
+    data = request.get_json()
+    sender_id = data.get("senderId")
+    
+    if not sender_id:
+        return "Missing senderId", 400
+
     subs = load_subscriptions()
     remove_subs = []
 
     for sub in subs:
+        if sub.get("senderId") == sender_id:
+            continue  # skip sender
+
         try:
             payload = {
                 "title": "Love Alert <3",
@@ -137,14 +151,14 @@ def send_love():
                 "mediaUrl": None
             }
             webpush(
-                subscription_info=sub,
+                subscription_info=sub["subscription"],
                 data=json.dumps(payload),
                 vapid_private_key=VAPID_PRIVATE_KEY,
                 vapid_claims=VAPID_CLAIMS
             )
-            print(f"Sent push to {sub['endpoint']}")
+            print(f"Sent push to {sub['subscription']['endpoint']}")
         except WebPushException as e:
-            print("Push Failed:", e)
+            print("Push Failed (removing sub):", e)
             remove_subs.append(sub)
 
     if remove_subs:
