@@ -8,7 +8,6 @@ app = Flask(__name__)
 SUBS_FILE = "subscriptions.json"
 
 def load_subscriptions():
-    """Load subscriptions from JSON file."""
     if not os.path.exists(SUBS_FILE):
         return []
     with open(SUBS_FILE, "r") as f:
@@ -18,7 +17,6 @@ def load_subscriptions():
             return []
 
 def save_subscriptions(subs):
-    """Save subscriptions to JSON file."""
     with open(SUBS_FILE, "w") as f:
         json.dump(subs, f)
 
@@ -26,7 +24,7 @@ def save_subscriptions(subs):
 VAPID_PRIVATE_KEY = "ifdb_gOVdDOJQEroNgSqDenNI64-uIPHMRI4JWiKwek"
 VAPID_CLAIMS = {"sub": "mailto:zenovix05@gmail.com"}
 
-# -------------------- Service Worker --------------------
+# -------------------- SERVICE WORKER --------------------
 @app.route('/service-worker.js')
 def service_worker():
     return send_from_directory('.', 'service-worker.js')
