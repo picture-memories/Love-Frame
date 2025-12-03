@@ -1,5 +1,6 @@
-// service-worker.js
+// -------------------- SERVICE WORKER --------------------
 
+// Install and activate immediately
 self.addEventListener("install", (event) => {
     self.skipWaiting();
 });
@@ -8,7 +9,7 @@ self.addEventListener("activate", (event) => {
     event.waitUntil(self.clients.claim());
 });
 
-// Send messages to all open tabs
+// Notify all open tabs
 async function notifyClients(message) {
     const windowClients = await clients.matchAll({ type: "window", includeUncontrolled: true });
     for (const client of windowClients) {
@@ -20,42 +21,39 @@ async function notifyClients(message) {
     }
 }
 
+// Handle push events
 self.addEventListener("push", (event) => {
     let data = {};
-    try { data = event.data.json(); } 
-    catch { }
+    try { data = event.data.json(); } catch {}
 
     const mediaUrl = data.mediaUrl;
 
-    // Tell open tabs (so they auto-show the picture)
-    if (mediaUrl) {
-        event.waitUntil(
-            notifyClients({ type: "MEDIA_UPDATE", url: mediaUrl })
-        );
-    }
+    event.waitUntil((async () => {
+        // Notify open tabs
+        if (mediaUrl) {
+            await notifyClients({ type: "MEDIA_UPDATE", url: mediaUrl });
+        }
 
-    const options = {
-        body: data.body || "Someone sent you love!",
-        icon: "/icon.png",
-        data: { mediaUrl: mediaUrl }
-    };
+        // Show notification
+        const options = {
+            body: data.body || "Someone sent you love!",
+            icon: "/static/icon.png",  // Make sure this exists
+            data: { mediaUrl }
+        };
 
-    event.waitUntil(
-        self.registration.showNotification(data.title || "Love Frame <3", options)
-    );
+        await self.registration.showNotification(data.title || "Love Frame <3", options);
+    })());
 });
 
+// Handle notification clicks
 self.addEventListener("notificationclick", (event) => {
     event.notification.close();
     const mediaUrl = event.notification.data?.mediaUrl;
 
     event.waitUntil((async () => {
-        const clientsList = await clients.matchAll({
-            type: "window",
-            includeUncontrolled: true
-        });
+        const clientsList = await clients.matchAll({ type: "window", includeUncontrolled: true });
 
-        // If a tab is open → focus and message it
+        // Focus existing tab if open
         if (clientsList.length > 0) {
             const client = clientsList[0];
             await client.focus();
@@ -66,15 +64,12 @@ self.addEventListener("notificationclick", (event) => {
             return;
         }
 
-        // No tab open → open directly to mediaUrl (absolute)
+        // Otherwise open a new tab
         if (clients.openWindow) {
             let openTo = mediaUrl || "/";
-
-            // Convert relative "/view/..." to absolute
             if (openTo.startsWith("/")) {
                 openTo = new URL(openTo, self.registration.scope).href;
             }
-
             await clients.openWindow(openTo);
         }
     })());
